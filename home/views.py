@@ -2,25 +2,40 @@ from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponse, HttpResponseRedirect
 from .models import Question, Choice
 from django.urls import reverse
+from django.views import generic
+from django.utils import timezone
 
 
 # Create your views here.
+class IndexView(generic.ListView):
+    template_name = 'home/index.html'
+    context_object_name = 'latest_question_list'
+
+    def get_queryset(self):
+        """
+        return the last five published question (not including those set to be published in the future).
+        :return:
+        """
+        return Question.objects.filter(
+            pub_date__lte=timezone.now()
+        ).order_by('-pub_date')[:5]
 
 
-def index(request):
-    latest_question_list = Question.objects.order_by('-pub_date')[:5]
-    context = {'latest_question_list': latest_question_list, }
-    return render(request, 'home/index.html', context)
+class DetailView(generic.DetailView):
+    model = Question
+    template_name = 'home/detail.html'
+
+    def get_queryset(self):
+        """
+        Excludes any question that aren't published yet
+        :return:
+        """
+        return Question.objects.filter(pub_date__lte=timezone.now())
 
 
-def detail(request, question_id):
-    question = get_object_or_404(Question, pk=question_id)
-    return render(request, 'home/detail.html', {'question': question})
-
-
-def results(request, question_id):
-    question = get_object_or_404(Question, pk=question_id)
-    return render(request, 'home/results.html', {"question": question})
+class ResultsView(generic.DetailView):
+    model = Question
+    template_name = 'home/results.html'
 
 
 def vote(request, question_id):
